@@ -1,0 +1,59 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Java",
+            "type": "shell",
+            "command": "javac",
+            "args": [
+                "-cp",
+                "lib\\opencv-4120.jar",
+                "-d",
+                "bin",
+                "src\\*.java"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$javac"
+        },
+        {
+            "label": "Run MainApp",
+            "type": "shell",
+            "command": "java",
+            "args": [
+                "--enable-native-access=ALL-UNNAMED",
+                "-Djava.library.path=native",
+                "-cp",
+                "bin;lib\\opencv-4120.jar",
+                "MainApp"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Build Java",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run FaceCapture",
+            "type": "shell",
+            "command": "java",
+            "args": [
+                "--enable-native-access=ALL-UNNAMED",
+                "-Djava.library.path=native",
+                "-cp",
+                "bin;lib\\opencv-4120.jar",
+                "FaceCapture"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Build Java",
+            "problemMatcher": []
+        }
+    ]
+}

@@ -1,0 +1,41 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "MainApp",
+            "request": "launch",
+            "mainClass": "MainApp",
+            "cwd": "${workspaceFolder}",
+            "vmArgs": "-Djava.library.path=${workspaceFolder}/native --enable-native-access=ALL-UNNAMED",
+            "classPaths": [
+                "${workspaceFolder}/bin",
+                "${workspaceFolder}/lib/opencv-4120.jar"
+            ]
+        },
+        {
+            "type": "java",
+            "name": "FaceCapture",
+            "request": "launch",
+            "mainClass": "FaceCapture",
+            "cwd": "${workspaceFolder}",
+            "vmArgs": "-Djava.library.path=${workspaceFolder}/native --enable-native-access=ALL-UNNAMED",
+            "classPaths": [
+                "${workspaceFolder}/bin",
+                "${workspaceFolder}/lib/opencv-4120.jar"
+            ]
+        },
+        {
+            "type": "java",
+            "name": "WebcamTest",
+            "request": "launch",
+            "mainClass": "WebcamTest",
+            "cwd": "${workspaceFolder}",
+            "vmArgs": "-Djava.library.path=${workspaceFolder}/native --enable-native-access=ALL-UNNAMED",
+            "classPaths": [
+                "${workspaceFolder}/bin",
+                "${workspaceFolder}/lib/opencv-4120.jar"
+            ]
+        }
+    ]
+}

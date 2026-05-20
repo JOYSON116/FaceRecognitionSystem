@@ -1,0 +1,14 @@
+{
+    "java.project.sourcePaths": [
+        "src"
+    ],
+    "java.project.outputPath": "bin",
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar"
+    ],
+    "java.debug.settings.onBuildFailureProceed": true,
+    "code-runner.runInTerminal": true,
+    "code-runner.executorMap": {
+        "java": "cd $workspaceRoot; javac -cp \"lib\\\\opencv-4120.jar\" -d bin src\\\\*.java; java \"--enable-native-access=ALL-UNNAMED\" \"-Djava.library.path=native\" -cp \"bin;lib\\\\opencv-4120.jar\" $fileNameWithoutExt"
+    }
+}
