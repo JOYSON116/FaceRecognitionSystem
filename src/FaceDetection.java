@@ -38,6 +38,7 @@ public class FaceDetection {
 
         String lastDetected = "unknown";
         int confirmCount = 0;
+        int unknownCount = 0;
         int emptyFrameCount = 0;
 
         final int REQUIRED_CONFIRMATIONS = 10;
@@ -108,6 +109,7 @@ public class FaceDetection {
                     displayName = PersonDatabase.getPersonName(result.imageFile);
 
                     color = new Scalar(0, 255, 0);
+                    unknownCount = 0;
 
                     if (result.imageFile.equals(lastDetected)) {
                         confirmCount++;
@@ -156,11 +158,46 @@ public class FaceDetection {
 
                 } else {
 
-                    displayName = "Unknown";
+                    displayName = "Not from MITE College";
                     color = new Scalar(0, 0, 255);
 
                     lastDetected = "unknown";
                     confirmCount = 0;
+                    unknownCount++;
+
+                    String scanText = String.format("Unknown person... %d/%d",
+                            unknownCount, REQUIRED_CONFIRMATIONS);
+                    Imgproc.putText(
+                            frame,
+                            scanText,
+                            new Point(20, 40),
+                            Imgproc.FONT_HERSHEY_SIMPLEX,
+                            0.8,
+                            color,
+                            2);
+
+                    if (unknownCount >= REQUIRED_CONFIRMATIONS) {
+
+                        Imgproc.putText(
+                                frame,
+                                "NOT FROM MITE COLLEGE",
+                                new Point(20, 80),
+                                Imgproc.FONT_HERSHEY_SIMPLEX,
+                                0.8,
+                                color,
+                                2);
+
+                        HighGui.imshow("Face Recognition", frame);
+
+                        HighGui.waitKey(2000);
+
+                        camera.release();
+                        HighGui.destroyAllWindows();
+
+                        PersonDatabase.showUnknownPersonMessage();
+
+                        return;
+                    }
                 }
 
                 // Draw face box
@@ -185,6 +222,7 @@ public class FaceDetection {
 
             if (!faceFound) {
                 confirmCount = 0;
+                unknownCount = 0;
                 lastDetected = "unknown";
             }
 

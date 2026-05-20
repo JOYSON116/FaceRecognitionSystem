@@ -127,6 +127,17 @@ public class PersonDatabase {
         System.out.println("=============================\n");
     }
 
+    /**
+     * Prints a clear result when the detected face is not registered.
+     */
+    public static void showUnknownPersonMessage() {
+        System.out.println("\n=============================");
+        System.out.println("  Unknown Person Detected!");
+        System.out.println("  Status     : Not from MITE College");
+        System.out.println("  Message    : Person is not registered in the college database.");
+        System.out.println("=============================\n");
+    }
+
     private static void ensureLoaded() {
         if (!loaded) loadDatabase();
     }
