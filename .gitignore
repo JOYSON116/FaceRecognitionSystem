@@ -1,0 +1,18 @@
+# Compiled Java output
+bin/
+*.class
+
+# Captured face images should stay private/local
+dataset/
+
+# Local editor and OS files
+.vscode/
+.idea/
+*.iml
+Thumbs.db
+Desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
