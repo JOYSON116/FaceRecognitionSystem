@@ -1,6 +1,21 @@
 import java.io.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.util.HashMap;
 import java.util.Map;
+import javax.swing.BorderFactory;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+import javax.swing.UIManager;
 
 public class PersonDatabase {
 
@@ -111,31 +126,146 @@ public class PersonDatabase {
         Person p = findPerson(imageFile);
         if (p == null) {
             System.out.println("No database entry found for: " + imageFile);
+            showResultDialog(
+                    "No Record Found",
+                    new String[][] {
+                            {"Image", imageFile},
+                            {"Status", "No database entry found"}
+                    },
+                    false);
             return;
         }
-        System.out.println("\n=============================");
-        System.out.println("  Person Identified!");
-        System.out.println("  Name       : " + p.name);
+
+        String[][] details;
         if (p.isStudent()) {
-            System.out.println("  USN        : " + valueOrDash(p.usn));
-            System.out.println("  Department : Student of " + p.department);
-            System.out.println("  Year       : " + valueOrDash(p.year));
+            details = new String[][] {
+                    {"Name", p.name},
+                    {"USN", valueOrDash(p.usn)},
+                    {"Department", "Student of " + valueOrDash(p.department)},
+                    {"Year", valueOrDash(p.year)},
+                    {"College", "MITE College"}
+            };
         } else {
-            System.out.println("  Department : Faculty of " + p.department);
+            details = new String[][] {
+                    {"Name", p.name},
+                    {"Department", "Faculty of " + valueOrDash(p.department)},
+                    {"College", "MITE College"}
+            };
         }
-        System.out.println("  College    : MITE College");
+
+        String message;
+        if (p.isStudent()) {
+            message = String.format(
+                    "Person Identified!%n%nName       : %s%nUSN        : %s%nDepartment : Student of %s%nYear       : %s%nCollege    : MITE College",
+                    p.name,
+                    valueOrDash(p.usn),
+                    valueOrDash(p.department),
+                    valueOrDash(p.year));
+        } else {
+            message = String.format(
+                    "Person Identified!%n%nName       : %s%nDepartment : Faculty of %s%nCollege    : MITE College",
+                    p.name,
+                    valueOrDash(p.department));
+        }
+
+        System.out.println("\n=============================");
+        System.out.println("  " + message.replace(System.lineSeparator(), System.lineSeparator() + "  "));
         System.out.println("=============================\n");
+
+        showResultDialog("Person Identified", details, true);
     }
 
     /**
      * Prints a clear result when the detected face is not registered.
      */
     public static void showUnknownPersonMessage() {
+        String message = "Unknown Person Detected!\n\n"
+                + "Status     : Not from MITE College\n"
+                + "Message    : Person is not registered in the college database.";
+
         System.out.println("\n=============================");
         System.out.println("  Unknown Person Detected!");
         System.out.println("  Status     : Not from MITE College");
         System.out.println("  Message    : Person is not registered in the college database.");
         System.out.println("=============================\n");
+
+        showResultDialog(
+                "Unknown Person Detected",
+                new String[][] {
+                        {"Status", "Not from MITE College"},
+                        {"Message", "Person is not registered in the college database"}
+                },
+                false);
+    }
+
+    private static void showResultDialog(String title, String[][] rows, boolean success) {
+        Color accent = success ? new Color(22, 163, 74) : new Color(220, 38, 38);
+        Color background = new Color(248, 250, 252);
+        Color text = new Color(15, 23, 42);
+        Color muted = new Color(71, 85, 105);
+
+        JPanel panel = new JPanel(new BorderLayout(0, 18));
+        panel.setBackground(background);
+        panel.setBorder(BorderFactory.createEmptyBorder(22, 26, 20, 26));
+        panel.setPreferredSize(new Dimension(430, Math.max(250, 150 + rows.length * 34)));
+
+        JLabel header = new JLabel(title, success ? UIManager.getIcon("OptionPane.informationIcon")
+                : UIManager.getIcon("OptionPane.warningIcon"), SwingConstants.LEFT);
+        header.setIconTextGap(12);
+        header.setForeground(accent);
+        header.setFont(header.getFont().deriveFont(Font.BOLD, 22f));
+        panel.add(header, BorderLayout.NORTH);
+
+        JPanel details = new JPanel(new GridBagLayout());
+        details.setBackground(Color.WHITE);
+        details.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(2, 0, 0, 0, accent),
+                BorderFactory.createEmptyBorder(16, 18, 16, 18)));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridy = 0;
+        gbc.insets = new Insets(6, 0, 6, 14);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        for (String[] row : rows) {
+            JLabel label = new JLabel(row[0] + ":");
+            label.setForeground(muted);
+            label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
+
+            JLabel value = new JLabel("<html>" + escapeHtml(row[1]) + "</html>");
+            value.setForeground(text);
+            value.setFont(value.getFont().deriveFont(Font.PLAIN, 14f));
+
+            gbc.gridx = 0;
+            gbc.weightx = 0;
+            details.add(label, gbc);
+
+            gbc.gridx = 1;
+            gbc.weightx = 1;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            details.add(value, gbc);
+
+            gbc.gridy++;
+            gbc.fill = GridBagConstraints.NONE;
+        }
+
+        panel.add(details, BorderLayout.CENTER);
+
+        JOptionPane pane = new JOptionPane(panel, JOptionPane.PLAIN_MESSAGE,
+                JOptionPane.DEFAULT_OPTION);
+        JDialog dialog = pane.createDialog((Component) null, "Face Recognition Result");
+        dialog.setResizable(false);
+        dialog.setVisible(true);
+    }
+
+    private static String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 
     private static void ensureLoaded() {

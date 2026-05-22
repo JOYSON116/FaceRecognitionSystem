@@ -30,6 +30,7 @@ public class FaceDetection {
 
         if (detector.empty()) {
             System.out.println("Cannot load face detector.");
+            camera.release();
             return;
         }
 
@@ -46,195 +47,198 @@ public class FaceDetection {
 
         System.out.println("Scanning for face...");
 
-        while (true) {
+        String identifiedImageFile = null;
+        boolean unknownIdentified = false;
 
-            camera.read(frame);
+        try {
+            while (true) {
 
-            if (frame.empty()) {
-                emptyFrameCount++;
-                if (emptyFrameCount >= MAX_EMPTY_FRAMES) {
-                    System.out.println("Camera stopped sending frames. Close other camera apps and try again.");
+                camera.read(frame);
+
+                if (frame.empty()) {
+                    emptyFrameCount++;
+                    if (emptyFrameCount >= MAX_EMPTY_FRAMES) {
+                        System.out.println("Camera stopped sending frames. Close other camera apps and try again.");
+                        break;
+                    }
+                    HighGui.waitKey(30);
+                    continue;
+                }
+
+                emptyFrameCount = 0;
+
+                MatOfRect faces = new MatOfRect();
+
+                Imgproc.cvtColor(frame, gray, Imgproc.COLOR_BGR2GRAY);
+                Imgproc.equalizeHist(gray, gray);
+
+                detector.detectMultiScale(
+                        gray,
+                        faces,
+                        1.15,
+                        6,
+                        0,
+                        new Size(100, 100),
+                        new Size());
+
+                Rect[] faceArray = faces.toArray();
+                Rect bestFace = FaceRecognizer.largestFace(faceArray);
+                boolean faceFound = bestFace != null;
+
+                if (faceArray.length > 1) {
+                    Imgproc.putText(
+                            frame,
+                            "Multiple faces detected - using largest face",
+                            new Point(20, 40),
+                            Imgproc.FONT_HERSHEY_SIMPLEX,
+                            0.7,
+                            new Scalar(0, 255, 255),
+                            2);
+                }
+
+                if (faceFound) {
+                    Rect rect = FaceRecognizer.clampRect(
+                            FaceRecognizer.addPadding(bestFace, 0.18),
+                            frame.cols(), frame.rows());
+
+                    Mat faceROI = new Mat(frame, rect);
+
+                    // Use the new confidence-based recognition
+                    RecognitionResult result = FaceRecognizer.recognizeFaceWithConfidence(faceROI);
+
+                    Scalar color;
+                    String displayName;
+
+                    if (result.isConfident) {
+
+                        displayName = PersonDatabase.getPersonName(result.imageFile);
+
+                        color = new Scalar(0, 255, 0);
+                        unknownCount = 0;
+
+                        if (result.imageFile.equals(lastDetected)) {
+                            confirmCount++;
+                        } else {
+                            lastDetected = result.imageFile;
+                            confirmCount = 1;
+                        }
+
+                        // Scanning progress with confidence
+                        String scanText = String.format("Scanning... %d/%d (confidence: %.0f%%)",
+                                confirmCount, REQUIRED_CONFIRMATIONS, result.confidence * 100);
+                        Imgproc.putText(
+                                frame,
+                                scanText,
+                                new Point(20, 40),
+                                Imgproc.FONT_HERSHEY_SIMPLEX,
+                                0.8,
+                                color,
+                                2);
+
+                        // If fully confirmed
+                        if (confirmCount >= REQUIRED_CONFIRMATIONS) {
+
+                            String identifiedText = String.format("IDENTIFIED: %s (%.1f%%)",
+                                    displayName, result.confidence * 100);
+                            Imgproc.putText(
+                                    frame,
+                                    identifiedText,
+                                    new Point(20, 80),
+                                    Imgproc.FONT_HERSHEY_SIMPLEX,
+                                    0.8,
+                                    color,
+                                    2);
+
+                            HighGui.imshow("Face Recognition", frame);
+
+                            HighGui.waitKey(800);
+
+                            identifiedImageFile = result.imageFile;
+                            break;
+                        }
+
+                    } else {
+
+                        displayName = "Not from MITE College";
+                        color = new Scalar(0, 0, 255);
+
+                        lastDetected = "unknown";
+                        confirmCount = 0;
+                        unknownCount++;
+
+                        String scanText = String.format("Unknown person... %d/%d",
+                                unknownCount, REQUIRED_CONFIRMATIONS);
+                        Imgproc.putText(
+                                frame,
+                                scanText,
+                                new Point(20, 40),
+                                Imgproc.FONT_HERSHEY_SIMPLEX,
+                                0.8,
+                                color,
+                                2);
+
+                        if (unknownCount >= REQUIRED_CONFIRMATIONS) {
+
+                            Imgproc.putText(
+                                    frame,
+                                    "NOT FROM MITE COLLEGE",
+                                    new Point(20, 80),
+                                    Imgproc.FONT_HERSHEY_SIMPLEX,
+                                    0.8,
+                                    color,
+                                    2);
+
+                            HighGui.imshow("Face Recognition", frame);
+
+                            HighGui.waitKey(800);
+
+                            unknownIdentified = true;
+                            break;
+                        }
+                    }
+
+                    // Draw face box
+                    Imgproc.rectangle(
+                            frame,
+                            new Point(rect.x, rect.y),
+                            new Point(rect.x + rect.width,
+                                    rect.y + rect.height),
+                            color,
+                            2);
+
+                    // Draw name
+                    Imgproc.putText(
+                            frame,
+                            displayName,
+                            new Point(rect.x, rect.y - 10),
+                            Imgproc.FONT_HERSHEY_SIMPLEX,
+                            0.7,
+                            color,
+                            2);
+                }
+
+                if (!faceFound) {
+                    confirmCount = 0;
+                    unknownCount = 0;
+                    lastDetected = "unknown";
+                }
+
+                HighGui.imshow("Face Recognition", frame);
+
+                // ESC to exit
+                if (HighGui.waitKey(30) == 27) {
                     break;
                 }
-                HighGui.waitKey(30);
-                continue;
             }
-
-            emptyFrameCount = 0;
-
-            MatOfRect faces = new MatOfRect();
-
-            Imgproc.cvtColor(frame, gray, Imgproc.COLOR_BGR2GRAY);
-            Imgproc.equalizeHist(gray, gray);
-
-            detector.detectMultiScale(
-                    gray,
-                    faces,
-                    1.15,
-                    6,
-                    0,
-                    new Size(100, 100),
-                    new Size());
-
-            Rect[] faceArray = faces.toArray();
-            Rect bestFace = FaceRecognizer.largestFace(faceArray);
-            boolean faceFound = bestFace != null;
-
-            if (faceArray.length > 1) {
-                Imgproc.putText(
-                        frame,
-                        "Multiple faces detected - using largest face",
-                        new Point(20, 40),
-                        Imgproc.FONT_HERSHEY_SIMPLEX,
-                        0.7,
-                        new Scalar(0, 255, 255),
-                        2);
-            }
-
-            if (faceFound) {
-                Rect rect = FaceRecognizer.clampRect(
-                        FaceRecognizer.addPadding(bestFace, 0.18),
-                        frame.cols(), frame.rows());
-
-                Mat faceROI = new Mat(frame, rect);
-
-                // Use the new confidence-based recognition
-                RecognitionResult result = FaceRecognizer.recognizeFaceWithConfidence(faceROI);
-
-                Scalar color;
-                String displayName;
-
-                if (result.isConfident) {
-
-                    displayName = PersonDatabase.getPersonName(result.imageFile);
-
-                    color = new Scalar(0, 255, 0);
-                    unknownCount = 0;
-
-                    if (result.imageFile.equals(lastDetected)) {
-                        confirmCount++;
-                    } else {
-                        lastDetected = result.imageFile;
-                        confirmCount = 1;
-                    }
-
-                    // Scanning progress with confidence
-                    String scanText = String.format("Scanning... %d/%d (confidence: %.0f%%)",
-                            confirmCount, REQUIRED_CONFIRMATIONS, result.confidence * 100);
-                    Imgproc.putText(
-                            frame,
-                            scanText,
-                            new Point(20, 40),
-                            Imgproc.FONT_HERSHEY_SIMPLEX,
-                            0.8,
-                            color,
-                            2);
-
-                    // If fully confirmed
-                    if (confirmCount >= REQUIRED_CONFIRMATIONS) {
-
-                        String identifiedText = String.format("IDENTIFIED: %s (%.1f%%)",
-                                displayName, result.confidence * 100);
-                        Imgproc.putText(
-                                frame,
-                                identifiedText,
-                                new Point(20, 80),
-                                Imgproc.FONT_HERSHEY_SIMPLEX,
-                                0.8,
-                                color,
-                                2);
-
-                        HighGui.imshow("Face Recognition", frame);
-
-                        HighGui.waitKey(2000);
-
-                        camera.release();
-                        HighGui.destroyAllWindows();
-
-                        PersonDatabase.showPersonDetails(result.imageFile);
-
-                        return;
-                    }
-
-                } else {
-
-                    displayName = "Not from MITE College";
-                    color = new Scalar(0, 0, 255);
-
-                    lastDetected = "unknown";
-                    confirmCount = 0;
-                    unknownCount++;
-
-                    String scanText = String.format("Unknown person... %d/%d",
-                            unknownCount, REQUIRED_CONFIRMATIONS);
-                    Imgproc.putText(
-                            frame,
-                            scanText,
-                            new Point(20, 40),
-                            Imgproc.FONT_HERSHEY_SIMPLEX,
-                            0.8,
-                            color,
-                            2);
-
-                    if (unknownCount >= REQUIRED_CONFIRMATIONS) {
-
-                        Imgproc.putText(
-                                frame,
-                                "NOT FROM MITE COLLEGE",
-                                new Point(20, 80),
-                                Imgproc.FONT_HERSHEY_SIMPLEX,
-                                0.8,
-                                color,
-                                2);
-
-                        HighGui.imshow("Face Recognition", frame);
-
-                        HighGui.waitKey(2000);
-
-                        camera.release();
-                        HighGui.destroyAllWindows();
-
-                        PersonDatabase.showUnknownPersonMessage();
-
-                        return;
-                    }
-                }
-
-                // Draw face box
-                Imgproc.rectangle(
-                        frame,
-                        new Point(rect.x, rect.y),
-                        new Point(rect.x + rect.width,
-                                rect.y + rect.height),
-                        color,
-                        2);
-
-                // Draw name
-                Imgproc.putText(
-                        frame,
-                        displayName,
-                        new Point(rect.x, rect.y - 10),
-                        Imgproc.FONT_HERSHEY_SIMPLEX,
-                        0.7,
-                        color,
-                        2);
-            }
-
-            if (!faceFound) {
-                confirmCount = 0;
-                unknownCount = 0;
-                lastDetected = "unknown";
-            }
-
-            HighGui.imshow("Face Recognition", frame);
-
-            // ESC to exit
-            if (HighGui.waitKey(30) == 27) {
-                break;
-            }
+        } finally {
+            camera.release();
+            HighGui.destroyAllWindows();
         }
 
-        camera.release();
-        HighGui.destroyAllWindows();
+        if (identifiedImageFile != null) {
+            PersonDatabase.showPersonDetails(identifiedImageFile);
+        } else if (unknownIdentified) {
+            PersonDatabase.showUnknownPersonMessage();
+        }
     }
 }
